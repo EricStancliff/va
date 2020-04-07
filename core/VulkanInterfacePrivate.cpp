@@ -535,10 +535,10 @@ void VulkanInterfacePrivate::createSwapChain() {
     m_swapChainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
 
-    m_mvp.model = glm::identity<glm::mat4>();
-    m_mvp.view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0));
-    m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
-    m_mvp.proj[1][1] *= -1; //This is Vulkan, we don't do that inverted y crap anymore.  So invert the y here.
+    //m_mvp.model = glm::identity<glm::mat4>();
+    //m_mvp.view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0));
+    //m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
+    //m_mvp.proj[1][1] *= -1; //This is Vulkan, we don't do that inverted y crap anymore.  So invert the y here.
 }
 
 void VulkanInterfacePrivate::createImageViews()
@@ -973,41 +973,73 @@ void VulkanInterfacePrivate::mainLoop()
 constexpr double RADIAN_TO_DEGREE = 57.2958;
 constexpr double DEGREE_TO_RADIAN = 0.0174533;
 
+
 void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const AggregateState& lastFrameState)
 {
-    if (state.mouse.button == GLFW_MOUSE_BUTTON_1 && lastFrameState.mouse.button == GLFW_MOUSE_BUTTON_1)
+  // the number of radians to rotate on the x and y axis
+  static float xRadians = 0.0;
+  static float yRadians = 0.0;
+
+  // mouse position the last time the left mouse button was clicked
+  static double old_xpos, old_ypos;
+  // the mouse position this frame
+  double xpos, ypos;
+  glfwGetCursorPos(m_window, &xpos, &ypos);
+
+  // was the left mouse button pressed last frame?
+  static bool buttonPressedLastFrame = false;
+
+  // const multiplier for mouse speed
+  const float mouseSpeed = 0.01;
+
+  int mousestate = glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_LEFT);
+  // check if the left mouse button is held down this frame
+  if (mousestate == GLFW_PRESS)
     {
-        auto dx = state.mouse.xPos - lastFrameState.mouse.xPos;
-        auto dy = state.mouse.yPos - lastFrameState.mouse.yPos;
-
-        //for now a pixel is a degree
-        auto temp = glm::inverse(m_mvp.view);
-        temp = glm::translate(temp, glm::vec3(0.0f, 0.0f, 0.0f));
-
-
-
-
+      // only do movement if the mouse button was also held last frame
+      if(buttonPressedLastFrame){
+        // Compute new rotations
+        // the check of 10 units is to protect against multiple
+        // seperate movements, where the user may have moved the
+        // mouse in between
+        if (((xpos - old_xpos) < 10) && ((ypos - old_ypos) < 10)){
+          yRadians += mouseSpeed * (xpos - old_xpos);
+          xRadians += mouseSpeed * (ypos - old_ypos);
+        }
+      }
+      // for next frame, set the old x and y pos
+      old_xpos = xpos;
+      old_ypos = ypos;
+      // self explanatory
+      buttonPressedLastFrame = true;
     }
+  else{
+    buttonPressedLastFrame = false;
+  }
 
-    m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
-    {
+  // no need for angles greater than 2 pi
+  if(xRadians > 2*M_PI)
+    xRadians -= 2*M_PI;
+  if(yRadians > 2*M_PI)
+    yRadians -= 2*M_PI;
 
-      auto translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0));
+  m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
+  //view matrix
+  {
+    auto translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0));
 
-      static float xDegrees = 0.0;
-      xDegrees+= 0.1;
-      glm::vec3 xAxis( 1.0, 0.0, 0.0);
-      auto rotateX = glm::rotate( - (float) (std::sin(xDegrees/ 20.0) / 2.5), xAxis );
+    glm::vec3 xAxis( 1.0, 0.0, 0.0);
+    auto rotateX = glm::rotate( - xRadians, xAxis );
 
-      static float yDegrees = 0.0;
-      yDegrees+= 0.01;
-      glm::vec3 yAxis( 0.0, 1.0, 0.0);
-      auto rotateY = glm::rotate( -yDegrees, yAxis );
+    glm::vec3 yAxis( 0.0, 1.0, 0.0);
+    auto rotateY = glm::rotate( - yRadians, yAxis );
+
+    m_mvp.view = translate * rotateX * rotateY;
+  }
+  m_mvp.model = glm::identity<glm::mat4>();
 
 
-      m_mvp.view = translate * rotateX * rotateY;
-    }
-    m_mvp.model = glm::identity<glm::mat4>();
+
 
 
 }
