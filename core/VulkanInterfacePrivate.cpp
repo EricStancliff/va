@@ -13,6 +13,11 @@
 #include <glm/gtx/hash.hpp>
 
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+
+#include <cmath>
+
 namespace std {
     template<> struct hash < VulkanInterfacePrivate::Vertex > {
         size_t operator()(VulkanInterfacePrivate::Vertex const& vertex) const {
@@ -531,7 +536,7 @@ void VulkanInterfacePrivate::createSwapChain() {
     vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
 
     m_mvp.model = glm::identity<glm::mat4>();
-    m_mvp.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    m_mvp.view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0));
     m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
     m_mvp.proj[1][1] *= -1; //This is Vulkan, we don't do that inverted y crap anymore.  So invert the y here.
 }
@@ -979,7 +984,32 @@ void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const Agg
         auto temp = glm::inverse(m_mvp.view);
         temp = glm::translate(temp, glm::vec3(0.0f, 0.0f, 0.0f));
 
+
+
+
     }
+
+    m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
+    {
+
+      auto translate = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0));
+
+      static float xDegrees = 0.0;
+      xDegrees+= 0.1;
+      glm::vec3 xAxis( 1.0, 0.0, 0.0);
+      auto rotateX = glm::rotate( - (float) (std::sin(xDegrees/ 20.0) / 2.5), xAxis );
+
+      static float yDegrees = 0.0;
+      yDegrees+= 0.01;
+      glm::vec3 yAxis( 0.0, 1.0, 0.0);
+      auto rotateY = glm::rotate( -yDegrees, yAxis );
+
+
+      m_mvp.view = translate * rotateX * rotateY;
+    }
+    m_mvp.model = glm::identity<glm::mat4>();
+
+
 }
 
 void VulkanInterfacePrivate::drawFrame()
