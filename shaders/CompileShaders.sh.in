@@ -1,0 +1,1 @@
+for x in $(ls shaders); do cd shaders; glslangValidator $x -V -o $x.spv; cd .. ; done

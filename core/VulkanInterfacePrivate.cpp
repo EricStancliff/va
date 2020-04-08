@@ -568,8 +568,8 @@ void VulkanInterfacePrivate::createImageViews()
 
 void VulkanInterfacePrivate::createGraphicsPipeline()
 {
-    auto vertShaderCode = readShaderFile(std::filesystem::current_path().string() + "\\shaders\\SimpleTriangle.vert.spv");
-    auto fragShaderCode = readShaderFile(std::filesystem::current_path().string() + "\\shaders\\SimpleTriangle.frag.spv");
+    auto vertShaderCode = readShaderFile(std::filesystem::current_path().string() + "/shaders/SimpleTriangle.vert.spv");
+    auto fragShaderCode = readShaderFile(std::filesystem::current_path().string() + "/shaders/SimpleTriangle.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -1140,7 +1140,7 @@ void VulkanInterfacePrivate::drawFrame()
     m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void VulkanInterfacePrivate::updateUniformBuffer(uint32_t currentImage) 
+void VulkanInterfacePrivate::updateUniformBuffer(uint32_t currentImage)
 {
     static const auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -1451,7 +1451,7 @@ void VulkanInterfacePrivate::createDescriptorSets() {
 
 }
 
-void VulkanInterfacePrivate::createTextureImage() 
+void VulkanInterfacePrivate::createTextureImage()
 {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -1784,7 +1784,7 @@ void VulkanInterfacePrivate::createDepthResources()
 {
     VkFormat depthFormat = findDepthFormat();
     createImage(m_swapChainExtent.width, m_swapChainExtent.height, 1, m_msaaSamples, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_depthImage, m_depthImageMemory);
-    
+
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = m_depthImage;
@@ -1834,7 +1834,7 @@ void VulkanInterfacePrivate::loadModel() {
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
         throw std::runtime_error(warn + err);
     }
-    
+
     std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
 
     for (const auto& shape : shapes) {
@@ -1883,7 +1883,7 @@ void VulkanInterfacePrivate::createColorResources() {
     VkFormat colorFormat = m_swapChainImageFormat;
 
     createImage(m_swapChainExtent.width, m_swapChainExtent.height, 1, m_msaaSamples, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_colorImage, m_colorImageMemory);
-    
+
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = m_colorImage;
