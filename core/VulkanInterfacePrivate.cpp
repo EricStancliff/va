@@ -633,7 +633,7 @@ void VulkanInterfacePrivate::createGraphicsPipeline()
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = 0;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -1003,8 +1003,21 @@ void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const Agg
         // seperate movements, where the user may have moved the
         // mouse in between
         if (((xpos - old_xpos) < 10) && ((ypos - old_ypos) < 10)){
-          yRadians += mouseSpeed * (xpos - old_xpos);
+          yRadians -= mouseSpeed * (xpos - old_xpos);
           xRadians += mouseSpeed * (ypos - old_ypos);
+
+          // no need for angles greater than 2 pi,
+          // nor rot x over PI/2
+          if(xRadians > M_PI/2.0)
+            xRadians = M_PI/2.0;
+          if(xRadians < -M_PI/2.0)
+            xRadians = -M_PI/2.0;
+
+          if(yRadians > 2*M_PI)
+            yRadians -= 2*M_PI;
+          if(yRadians < 2*M_PI)
+            yRadians += 2*M_PI;
+
         }
       }
       // for next frame, set the old x and y pos
@@ -1017,11 +1030,6 @@ void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const Agg
     buttonPressedLastFrame = false;
   }
 
-  // no need for angles greater than 2 pi
-  if(xRadians > 2*M_PI)
-    xRadians -= 2*M_PI;
-  if(yRadians > 2*M_PI)
-    yRadians -= 2*M_PI;
 
   m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
   //view matrix
@@ -1065,6 +1073,20 @@ void VulkanInterfacePrivate::drawFrame()
     // Mark the image as now being in use by this frame
     m_imagesInFlight[imageIndex] = m_inFlightFences[m_currentFrame];
 
+
+    // draw model
+    // in the absense of a matrix stack, make a copy of the model matrix
+    auto globalSpace = m_mvp.model;
+
+    glm::vec3 xAxis( 1.0, 0.0, 0.0);
+    auto rotateX = glm::rotate( glm::radians(90.0f), xAxis );
+
+    glm::vec3 yAxis( 0.0, 1.0, 0.0);
+    auto rotateY = glm::rotate( glm::radians(90.0f), yAxis );
+
+    m_mvp.model = rotateY * rotateX;
+
+
     updateUniformBuffer(imageIndex);
 
     VkSubmitInfo submitInfo = {};
@@ -1087,6 +1109,8 @@ void VulkanInterfacePrivate::drawFrame()
         throw std::runtime_error("failed to submit draw command buffer!");
     }
 
+
+    // end draw model
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
@@ -1108,6 +1132,10 @@ void VulkanInterfacePrivate::drawFrame()
     else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }
+
+    // reset the model matrix
+    m_mvp.model = globalSpace;
+
 
     m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
