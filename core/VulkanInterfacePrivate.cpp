@@ -9,10 +9,6 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-
-
 namespace std {
     template<> struct hash < VulkanInterfacePrivate::Vertex > {
         size_t operator()(VulkanInterfacePrivate::Vertex const& vertex) const {
@@ -532,7 +528,7 @@ void VulkanInterfacePrivate::createSwapChain() {
 
     m_mvp.model = glm::identity<glm::mat4>();
     m_mvp.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 10.0f);
+    m_mvp.proj = glm::perspective(glm::radians(45.0f), m_swapChainExtent.width / (float)m_swapChainExtent.height, 0.1f, 100.0f);
     m_mvp.proj[1][1] *= -1; //This is Vulkan, we don't do that inverted y crap anymore.  So invert the y here.
 }
 
@@ -948,6 +944,8 @@ void VulkanInterfacePrivate::mainLoop()
     while (!glfwWindowShouldClose(m_window))
     {
         AggregateState state(m_window);
+        state.pullForward(m_lastFrameState);
+
         glfwSetWindowUserPointer(m_window, &state);
 
         glfwPollEvents();
@@ -961,24 +959,50 @@ void VulkanInterfacePrivate::mainLoop()
         glfwSetWindowUserPointer(m_window, nullptr);
 
         m_lastFrameState = std::move(state);
+        m_lastFrameState.window.resized = false;
     }
     vkDeviceWaitIdle(m_device);
 }
 
-constexpr double RADIAN_TO_DEGREE = 57.2958;
-constexpr double DEGREE_TO_RADIAN = 0.0174533;
-
 void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const AggregateState& lastFrameState)
 {
-    if (state.mouse.button == GLFW_MOUSE_BUTTON_1 && lastFrameState.mouse.button == GLFW_MOUSE_BUTTON_1)
+    if (state.mouse.button == GLFW_MOUSE_BUTTON_1 && lastFrameState.mouse.button == GLFW_MOUSE_BUTTON_1
+        && state.mouse.action == GLFW_PRESS && lastFrameState.mouse.action == GLFW_PRESS)
     {
-        auto dx = state.mouse.xPos - lastFrameState.mouse.xPos;
-        auto dy = state.mouse.yPos - lastFrameState.mouse.yPos;
+        auto dx = lastFrameState.mouse.xPos - state.mouse.xPos;
+        auto dy = lastFrameState.mouse.yPos - state.mouse.yPos;
 
-        //for now a pixel is a degree
-        auto temp = glm::inverse(m_mvp.view);
-        temp = glm::translate(temp, glm::vec3(0.0f, 0.0f, 0.0f));
+        //find current theta
+        glm::vec3 translation = glm::inverse(m_mvp.view)[3];
+        float radius = glm::length(translation);
+        float theta = std::acos(translation.z / radius);
+        float temp = translation.x / (radius * std::sin(theta));
+        if (temp > 1.0f)
+            temp = 1.0;
+        if (temp < -1.0f)
+            temp = -1.0;
+        float phi = std::acos(temp);
 
+        phi += glm::radians((float)dx);
+        theta += glm::radians((float)dy);
+
+        theta = glm::clamp(theta, 0.1f, glm::pi<float>() - 0.1f); //don't let it get to zero so my forward and up don't match
+
+        glm::vec3 newTranslation;
+        newTranslation.x = radius * std::cos(phi) * std::sin(theta);
+        newTranslation.y = radius * std::sin(phi) * std::sin(theta);
+        newTranslation.z = radius * std::cos(theta);
+
+        glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 cameraDirection = glm::normalize(newTranslation - cameraTarget);
+        glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
+        glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+        glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+
+        glm::mat4 newView;
+        newView = glm::lookAt(newTranslation, glm::vec3(0), cameraUp);
+
+        m_mvp.view = newView;
     }
 }
 

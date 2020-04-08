@@ -4,10 +4,10 @@
 class EventState
 {
 public:
-    EventState(GLFWwindow* w) : window(w) {}
+    EventState(GLFWwindow* w) : owningWindow(w) {}
     virtual ~EventState() = default;
 
-    GLFWwindow* window;
+    GLFWwindow* owningWindow;
 
 private:
     EventState() = default;
@@ -46,6 +46,13 @@ class AggregateState : public EventState
 public:
     AggregateState(GLFWwindow* w) : EventState(w), mouse(w), keyboard(w), window(w) {}
     virtual ~AggregateState() = default;
+
+    void pullForward(const AggregateState& rhs)
+    {
+        mouse = rhs.mouse;
+        keyboard = rhs.keyboard;
+        window = rhs.window;
+    }
 
     MouseState mouse;
     KeyboardState keyboard;
