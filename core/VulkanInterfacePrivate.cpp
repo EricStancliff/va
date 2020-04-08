@@ -976,7 +976,8 @@ void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const Agg
         auto dy = state.mouse.yPos - lastFrameState.mouse.yPos;
 
         //for now a pixel is a degree
-
+        auto temp = glm::inverse(m_mvp.view);
+        temp = glm::translate(temp, glm::vec3(0.0f, 0.0f, 0.0f));
 
     }
 }
