@@ -976,12 +976,7 @@ void VulkanInterfacePrivate::handleEvents(const AggregateState& state, const Agg
         glm::vec3 translation = glm::inverse(m_mvp.view)[3];
         float radius = glm::length(translation);
         float theta = std::acos(translation.z / radius);
-        float temp = translation.x / (radius * std::sin(theta));
-        if (temp > 1.0f)
-            temp = 1.0;
-        if (temp < -1.0f)
-            temp = -1.0;
-        float phi = std::acos(temp);
+        float phi = std::atan2(translation.y, translation.x);
 
         phi += glm::radians((float)dx);
         theta += glm::radians((float)dy);
