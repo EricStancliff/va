@@ -45,7 +45,8 @@ namespace
     }
 
     const std::vector<const char*> g_validationLayers = {
-        "VK_LAYER_KHRONOS_validation"
+             "VK_LAYER_LUNARG_core_validation"
+             //        "VK_LAYER_KHRONOS_validation"
     };
 
     const std::vector<const char*> g_deviceExtensions = {
